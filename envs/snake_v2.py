@@ -1,14 +1,13 @@
 '''
 Author: Sunghoon Hong
 Title: snake_v2.py
-Version: 0.1.1
+Version: 0.1.2
 Description: Snake 2 game Environment
 Detail:
     Continuous Action Space
 
 Update:
-    add traps
-
+    add turn on/off trap
 '''
 
 import os
@@ -256,19 +255,22 @@ class Trap(pg.sprite.Sprite):
         
 class Game:
 
-    def __init__(self):
+    def __init__(self, difficulty=1):
         self.snake = Snake(Head())
         self.goals = pg.sprite.Group()
-        self.traps = pg.sprite.Group()
+        self.difficulty = difficulty
+        if self.difficulty > 0:
+            self.traps = pg.sprite.Group()
         self.screen = pg.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
         self.display = False
 
     def reset(self):
         self.snake.reset()
         self.goals.empty()
-        self.traps.empty()
         self.create_goal()
-        self.create_trap()
+        if self.difficulty > 0:
+            self.traps.empty()
+            self.create_trap()
         self.score = 0
         self.direc = np.array([0., 0.])
         self.speed = 0.1
@@ -306,10 +308,12 @@ class Game:
             info
         '''
         info = 'normal'
-        if pg.sprite.spritecollide(self.snake.head, self.traps, False, pg.sprite.collide_circle):
-            self.snake.life -= 1
-            info = 'trap'
-        elif pg.sprite.spritecollide(self.snake.head.eye, self.snake.bodys, False, pg.sprite.collide_circle):
+        if self.difficulty > 0:
+            if pg.sprite.spritecollide(self.snake.head, self.traps, False, pg.sprite.collide_circle):
+                self.snake.life -= 1
+                info = 'trap'
+                return info
+        if pg.sprite.spritecollide(self.snake.head.eye, self.snake.bodys, False, pg.sprite.collide_circle):
             self.snake.life -= 1
             info = 'body'
         if self.snake.boundary_collision():
@@ -330,7 +334,8 @@ class Game:
         self.snake.set_direction(self.direc)
         self.snake.set_speed(self.speed)
         self.snake.update()
-        self.traps.update(self.snake.head.pos)
+        if self.difficulty > 0:
+            self.traps.update(self.snake.head.pos)
         info = self.collision()
         self.create_goal()
             
@@ -340,7 +345,8 @@ class Game:
         self.screen.fill(BG_COLOR)
         self.goals.draw(self.screen)
         self.snake.draw(self.screen)
-        self.traps.draw(self.screen)
+        if self.difficulty > 0:
+            self.traps.draw(self.screen)
     
     def input(self, speed, delta_theta):
         delta_theta *= np.pi
@@ -364,17 +370,27 @@ class Game:
 
 
 class Env:
-    def __init__(self, sparse_reward=True, use_feature=False):
+    def __init__(self, **kwargs):
+        '''
+        params:
+            sparse_reward (bool) default=True
+            use_feature (bool) default=False
+            difficulty (int) default=1  [0: No trap, 1: One trap]
+        '''
         pg.init()
+        self.difficulty = kwargs.get('difficulty', 1)
+        self.sparse_reward = kwargs.get('sparse_reward', True)
+        self.use_feature = kwargs.get('use_feature', False)
+
         self.action_space = Box(low=np.array([0.1, -1.]), high=np.array([1., 1.]), dtype='float32')
-        self.game = Game()
-        if not sparse_reward:
+        self.game = Game(self.difficulty)
+        if not self.sparse_reward:
             raise NotImplementedError
-        self.scheme = SPARSE_REWARD if sparse_reward else DENSE_REWARD
-        self.use_feature = use_feature
+        self.scheme = SPARSE_REWARD if kwargs['sparse_reward'] else DENSE_REWARD
+        self.use_feature = kwargs['use_feature']
         if self.use_feature:
             raise NotImplementedError
-        self.observation_size = [4] if use_feature else [400, 400, 3]
+        self.observation_size = [4] if self.use_feature else [400, 400, 3]
 
     def reset(self):
         self.game.reset()
