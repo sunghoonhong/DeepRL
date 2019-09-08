@@ -351,12 +351,22 @@ class Game:
 
 
 class Env:
-    def __init__(self, sparse_reward=True, use_feature=True):
+    def __init__(self, **kwargs):
+        '''
+        params:
+            sparse_reward (bool) default=True
+            use_feature (bool) default=False
+            difficulty (int) default=0
+        '''
+        
+        self.difficulty = kwargs.get('difficulty', 0)
+        self.sparse_reward = kwargs.get('sparse_reward', True)
+        self.use_feature = kwargs.get('use_feature', False)
+
         self.action_space = gym.spaces.Discrete(3)
         self.game = Game()
-        self.scheme = SPARSE_REWARD if sparse_reward else DENSE_REWARD
-        self.use_feature = use_feature
-        self.observation_size = [8] if use_feature else [400, 400, 3]
+        self.scheme = SPARSE_REWARD if self.sparse_reward else DENSE_REWARD
+        self.observation_size = [8] if self.use_feature else [400, 400, 3]
 
     def reset(self):
         '''
