@@ -64,7 +64,7 @@ RED50 = (200, 50, 50)
 BG_COLOR = WHITE
 
 SPEED = 10
-SMOOTH = 0.3
+SMOOTH = 0.35
 EYE_RADIUS = 0.1
 EYE_SIZE = (EYE_RADIUS*2, EYE_RADIUS*2)
 TRAP_IMGS = [
@@ -377,7 +377,6 @@ class Env:
             use_feature (bool) default=False
             difficulty (int) default=1  [0: No trap, 1: One trap]
         '''
-        pg.init()
         self.difficulty = kwargs.get('difficulty', 1)
         self.sparse_reward = kwargs.get('sparse_reward', True)
         self.use_feature = kwargs.get('use_feature', False)
