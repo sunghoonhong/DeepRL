@@ -1,10 +1,14 @@
 '''
 Author: Sunghoon Hong
 Title: snake_v2.py
-Version: 0.0.1
+Version: 0.1.1
 Description: Snake 2 game Environment
 Detail:
     Continuous Action Space
+
+Update:
+    add traps
+
 '''
 
 import os
@@ -20,6 +24,7 @@ DENSE_REWARD = {
     'goal': 1,
     'boundary' : -1,
     'body': -1,
+    'trap': -1,
     'closer': 0.01,
     'farther': -0.01
 }
@@ -28,6 +33,7 @@ SPARSE_REWARD = {
     'goal': 1,
     'boundary': -1,
     'body': -1,
+    'trap': -1,
     'normal': 0
 }
 
@@ -40,9 +46,14 @@ GRID_SIZE = (GRID_LEN, GRID_LEN)
 RADIUS = GRID_LEN // 2 - 1
 RADIUS_SIZE = np.array([RADIUS, RADIUS])
 
+TRAP_SIZE = (GRID_LEN * 6, GRID_LEN * 6)
+TRAP_RADIUS_HIGH = GRID_LEN * 3 - 1
+TRAP_RADIUS_LOW = GRID_LEN - 1
+TRAP_RADIUS_DIFF = TRAP_RADIUS_HIGH - TRAP_RADIUS_LOW
+
 # time
 FPS = 30
-DELAY = 0
+DELAY = 0.02
 
 # color
 BLACK = (0, 0, 0)
@@ -54,10 +65,16 @@ RED50 = (200, 50, 50)
 BG_COLOR = WHITE
 
 SPEED = 10
-SMOOTH = 0.4
+SMOOTH = 0.3
 EYE_RADIUS = 0.1
 EYE_SIZE = (EYE_RADIUS*2, EYE_RADIUS*2)
-
+TRAP_IMGS = [
+    pg.transform.scale(pg.image.load(os.path.join('imgs/snake', 'trap_5.png')), TRAP_SIZE),
+    pg.transform.scale(pg.image.load(os.path.join('imgs/snake', 'trap_4.png')), TRAP_SIZE),
+    pg.transform.scale(pg.image.load(os.path.join('imgs/snake', 'trap_3.png')), TRAP_SIZE),
+    pg.transform.scale(pg.image.load(os.path.join('imgs/snake', 'trap_2.png')), TRAP_SIZE),
+    pg.transform.scale(pg.image.load(os.path.join('imgs/snake', 'trap_1.png')), TRAP_SIZE)
+]
 
 class Head(pg.sprite.Sprite):
     
@@ -82,8 +99,10 @@ class Head(pg.sprite.Sprite):
         
 
     def reset(self):
-        self.speed = SPEED * 0.1        
+        self.speed = SPEED * 0.2
         self.direction = np.array((0, 0))
+        self.theta = 0.
+        self.pos = self.init_pos
         self.rect.center = self.init_pos
         self.eye.rect.center = self.rect.center
         self.trace = self.rect
@@ -98,12 +117,13 @@ class Head(pg.sprite.Sprite):
         self.trace = self.rect
         self.rect = self.rect.move(self.speed  * self.direction)
         self.eye.rect.center = self.rect.center + self.radius * self.direction
+        self.pos = self.rect.center
 
     def set_direction(self, direc):
         self.direction = direc
 
     def set_speed(self, speed):
-        self.speed = SPEED * speed
+        self.speed = SPEED * (speed + 0.2)
 
     def chain(self, tail):
         self.tail = tail
@@ -198,19 +218,57 @@ class Goal(pg.sprite.Sprite):
     def draw(self, screen):
         screen.blit(self.image, self.rect)
 
+class Trap(pg.sprite.Sprite):
 
+    def __init__(self):
+        pg.sprite.Sprite.__init__(self)
+        
+        self.rect = pg.Rect((0, 0), TRAP_SIZE)
+        self.pos = None
+        self.radius = TRAP_RADIUS_HIGH
+        self.speed = SPEED * 0.1
+        self.img_idx = 0
+        self.img_dir = 1
+        self.image = TRAP_IMGS[self.img_idx]
+        
+    def update(self, head_pos):
+        self.move(head_pos)
+        self.radius = (self.img_idx + (TRAP_RADIUS_LOW / TRAP_RADIUS_DIFF)) / 5 * TRAP_RADIUS_HIGH
+        self.image = TRAP_IMGS[int(self.img_idx)]
+        self.img_idx += 0.1 * self.img_dir
+        if self.img_idx >= len(TRAP_IMGS):
+            self.img_idx = len(TRAP_IMGS) - 1
+            self.img_dir *= -1
+        elif self.img_idx <= 0:
+            self.img_idx = 0
+            self.img_dir *= -1
+
+    def move(self, head_pos):
+        head_pos = np.array(head_pos, dtype=np.float64)
+        heading = normalize(head_pos - self.pos)
+        noise = np.random.normal(0, 0.5, size=2).astype(np.float64)
+        self.pos += (heading + noise) * self.speed
+        self.rect.center = self.pos
+    
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
+
+        
 class Game:
 
     def __init__(self):
         self.snake = Snake(Head())
         self.goals = pg.sprite.Group()
+        self.traps = pg.sprite.Group()
         self.screen = pg.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
         self.display = False
 
     def reset(self):
         self.snake.reset()
         self.goals.empty()
+        self.traps.empty()
         self.create_goal()
+        self.create_trap()
         self.score = 0
         self.direc = np.array([0., 0.])
         self.speed = 0.1
@@ -227,13 +285,31 @@ class Game:
                     break
             self.goals.add(goal)
         
+    def create_trap(self):
+        trap = Trap()
+        while True:
+            trap.rect.topleft = random.sample(
+                [(0, random.randrange(0, WINDOW_HEIGHT - GRID_LEN*2, GRID_LEN*2)),
+                (WINDOW_WIDTH - GRID_LEN * 2, random.randrange(0, WINDOW_HEIGHT - GRID_LEN*2, GRID_LEN*2)),
+                (random.randrange(0, WINDOW_WIDTH - GRID_LEN*2, GRID_LEN*2), 0),
+                (random.randrange(0, WINDOW_WIDTH - GRID_LEN*2, GRID_LEN*2), WINDOW_HEIGHT - GRID_LEN*2)], 1
+            )[0]
+            if trap.rect.topleft != self.snake.head.rect.topleft:
+                break
+        trap.pos = np.array(trap.rect.topleft, dtype=np.float64)
+        self.traps.add(trap)
+
+
     def collision(self):
         '''
         return:
             info
         '''
         info = 'normal'
-        if pg.sprite.spritecollide(self.snake.head.eye, self.snake.bodys, False, pg.sprite.collide_circle):
+        if pg.sprite.spritecollide(self.snake.head, self.traps, False, pg.sprite.collide_circle):
+            self.snake.life -= 1
+            info = 'trap'
+        elif pg.sprite.spritecollide(self.snake.head.eye, self.snake.bodys, False, pg.sprite.collide_circle):
             self.snake.life -= 1
             info = 'body'
         if self.snake.boundary_collision():
@@ -254,20 +330,26 @@ class Game:
         self.snake.set_direction(self.direc)
         self.snake.set_speed(self.speed)
         self.snake.update()
+        self.traps.update(self.snake.head.pos)
         info = self.collision()
         self.create_goal()
+            
         return info
 
     def draw(self):
         self.screen.fill(BG_COLOR)
         self.goals.draw(self.screen)
         self.snake.draw(self.screen)
+        self.traps.draw(self.screen)
     
-    def input(self, speed, theta):
-        theta *= np.pi
+    def input(self, speed, delta_theta):
+        delta_theta *= np.pi
+        temp_theta = self.snake.head.theta
+        theta = temp_theta + delta_theta
         direction = np.array([np.cos(theta), np.sin(theta)])
         self.direc += SMOOTH * (direction - self.direc)
         self.direc = normalize(self.direc)
+        self.snake.head.theta = theta
         self.speed = speed
 
     def init_render(self):
@@ -353,18 +435,23 @@ if __name__ == '__main__':
                 if evt.key == pg.K_ESCAPE:
                     quit()
         pos = np.array(pg.mouse.get_pos())
+        temp_theta = game.snake.head.theta
         head = game.snake.head.rect.center
         heading = (pos - head)
         speed = np.linalg.norm(heading)
-        speed = np.clip(speed, 0, 0.9 * (WINDOW_WIDTH // 4))
+        speed = np.clip(speed, 0, (WINDOW_WIDTH // 4))
         speed /= WINDOW_WIDTH // 4
-        speed += 0.1
         
         if heading[0]==0 and heading[1]==0:
             continue
         pos = normalize(heading)
-        theta = np.arctan2(pos[1], pos[0]) / np.pi
-        game.input(speed, theta)
+        theta = np.arctan2(pos[1], pos[0])
+
+        delta_theta = theta - temp_theta
+        delta_theta = np.clip(delta_theta, -np.pi, np.pi)
+        delta_theta /= np.pi
+        # print(delta_theta)
+        game.input(speed, delta_theta)
         game.update()
         game.draw()
         if render:
