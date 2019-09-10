@@ -10,7 +10,7 @@ I work in TensorFlow2 Framework
     
 - Snake_v2
     - Observation space: (RGB array)
-    - Action space: Box(2), [Speed(0.1 ~ 1.0), Angle(-1.0 ~ 1.0)]
+    - Action space: Box(2), [Speed(0.0 ~ 1.0), Angle(-1.0 ~ 1.0)]
     - Reward scheme: (Dense or Sparse)
 
 
