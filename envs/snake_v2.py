@@ -42,12 +42,14 @@ WINDOW_HEIGHT = 400
 
 GRID_LEN = 20
 GRID_SIZE = (GRID_LEN, GRID_LEN)
-RADIUS = GRID_LEN // 2 - 1
+# RADIUS = GRID_LEN // 2 - 1
+RADIUS = 15
 RADIUS_SIZE = np.array([RADIUS, RADIUS])
+CELL_SIZE = (RADIUS * 2 + 1, RADIUS * 2 + 1)
 
 TRAP_SIZE = (GRID_LEN * 6, GRID_LEN * 6)
 TRAP_RADIUS_HIGH = GRID_LEN * 3 - 1
-TRAP_RADIUS_LOW = GRID_LEN - 1
+TRAP_RADIUS_LOW = GRID_LEN // 2 - 1
 TRAP_RADIUS_DIFF = TRAP_RADIUS_HIGH - TRAP_RADIUS_LOW
 
 # time
@@ -85,12 +87,12 @@ class Head(pg.sprite.Sprite):
         self.eye.rect = pg.Rect((0,0), EYE_SIZE)
         self.eye.radius = EYE_RADIUS
 
-        self.rect = pg.Rect((0,0), GRID_SIZE)
+        self.rect = pg.Rect((0,0), CELL_SIZE)
         self.radius = RADIUS
         self.init_x = init_x
         self.init_y = init_y
         self.init_pos = np.array((init_x, init_y))
-        self.image = pg.Surface(GRID_SIZE, pg.SRCALPHA)
+        self.image = pg.Surface(CELL_SIZE, pg.SRCALPHA)
         gdraw.aacircle(self.image, self.rect.center[0], self.rect.center[1], int(self.radius), GREEN50)
         gdraw.filled_circle(self.image, self.rect.center[0], self.rect.center[1], int(self.radius), GREEN50)
 
@@ -136,8 +138,8 @@ class Body(pg.sprite.Sprite):
         self.head = head
         self.tail = None
         self.trace = None
-        self.rect = pg.Rect((0, 0), GRID_SIZE)
-        self.image = pg.Surface(GRID_SIZE, pg.SRCALPHA)
+        self.rect = pg.Rect((0, 0), CELL_SIZE)
+        self.image = pg.Surface(CELL_SIZE, pg.SRCALPHA)
         gdraw.aacircle(self.image, self.rect.center[0], self.rect.center[1], int(self.radius), GREEN)
         gdraw.filled_circle(self.image, self.rect.center[0], self.rect.center[1], int(self.radius), GREEN)
         self.rect.center = head.trace.center
@@ -208,8 +210,8 @@ class Goal(pg.sprite.Sprite):
 
     def __init__(self):
         pg.sprite.Sprite.__init__(self)
-        self.rect = pg.Rect((0, 0), GRID_SIZE)
-        self.image = pg.Surface(GRID_SIZE, pg.SRCALPHA)
+        self.rect = pg.Rect((0, 0), CELL_SIZE)
+        self.image = pg.Surface(CELL_SIZE, pg.SRCALPHA)
         self.radius = RADIUS
         gdraw.aacircle(self.image, self.rect.center[0], self.rect.center[1], int(self.radius), RED50)
         gdraw.filled_circle(self.image, self.rect.center[0], self.rect.center[1], int(self.radius), RED50)
@@ -381,7 +383,7 @@ class Env:
         self.sparse_reward = kwargs.get('sparse_reward', True)
         self.use_feature = kwargs.get('use_feature', False)
 
-        self.action_space = Box(low=np.array([0.1, -1.]), high=np.array([1., 1.]), dtype='float32')
+        self.action_space = Box(low=np.array([0., -1.]), high=np.array([1., 1.]), dtype='float32')
         self.game = Game(self.difficulty)
         if not self.sparse_reward:
             raise NotImplementedError
@@ -403,10 +405,14 @@ class Env:
     def step(self, action):
         if self.game.display:
             pg.event.pump()
+            for evt in pg.event.get():
+                if evt.type == pg.QUIT:
+                    quit()
         self.game.input(action[0], action[1])
-        info = self.game.update()
+        info = {}
+        info['end'] = self.game.update()
         done = (self.game.snake.life <= 0)
-        reward = self.scheme[info]
+        reward = self.scheme[info['end']]
             
         self.game.draw()
         if self.use_feature:
@@ -422,6 +428,9 @@ class Env:
         if not self.game.display:
             self.init_render()
         pg.display.flip()
+
+    def close(self):
+        pg.quit()
 
     def snapshot(self):
         pg.image.save(self.game.screen, 'snapshots/'+str(int(time.time()*10000))+'.png')

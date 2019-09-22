@@ -391,10 +391,14 @@ class Env:
     def step(self, action):
         if self.game.display:
             pg.event.pump()
+            for evt in pg.event.get():
+                if evt.type == pg.QUIT:
+                    quit()
         self.game.keydown(action)
-        info = self.game.update()
+        info = {}
+        info['end'] = self.game.update()
         done = (self.game.snake.life <= 0)
-        reward = self.scheme[info]
+        reward = self.scheme[info['end']]
             
         self.game.draw()
         
@@ -414,8 +418,12 @@ class Env:
     def render(self):
         self.game.render()
 
+    def close(self):
+        pg.quit()
+
     def snapshot(self):
         pg.image.save(self.game.screen, 'snapshots/'+str(int(time.time()*10000))+'.png')
+
 
 if __name__ == '__main__':
     os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (64, 64)
@@ -445,6 +453,6 @@ if __name__ == '__main__':
         print(game.update())
         game.draw()
         if render:
-            game.render()            
+            game.render()
 
     print('Score:', game.score, 'Step:', step)
