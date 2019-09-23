@@ -20,8 +20,8 @@ if __name__ == '__main__':
     parser.add_argument('--dense',  action='store_false')
     parser.add_argument('--feature', action='store_true')
     parser.add_argument('--difficulty', type=int, default=1)
-    parser.add_argument('--delay',  type=float, default=0.02)
-    parser.add_argument('--episode', type=int, default=10)
+    parser.add_argument('--delay',  type=float, default=0.)
+    parser.add_argument('--episode', type=int, default=int(1e8))
     parser.add_argument('--resize', type=int, default=84)
     parser.add_argument('--horizon', type=int, default=64)
     parser.add_argument('--update_rate', type=int, default=1024)
@@ -62,12 +62,13 @@ if __name__ == '__main__':
         stats.append(stat)
         score += stat['score']
         step += stat['step']
+        print('[E%dT%d] Score: %d\t\t' % (episode, stat['step'], stat['score']), end='\r')
         if episode % args.save_rate == 0:
             # average stats
             score /= args.save_rate
             step /= args.save_rate
             # print
-            print('Ep%d' % episode, 'Score:', score, 'Step:', step, '\t', flush=True)
+            print('Ep%d' % episode, 'Score:', score, 'Step:', step, '\t\t', flush=True)
             
             # save
             if best_score < score:
@@ -79,5 +80,8 @@ if __name__ == '__main__':
                 writer = csv.writer(f)
                 for row in stats:
                     writer.writerow([r for _, r in row.items()])
+            score = 0.
+            step = 0.
+            stats.clear()
 
     args.env.close()
