@@ -18,7 +18,7 @@ class Randomly(Agent):
     def get_action(self):
         return self.action_space.sample()
 
-    def play(self, render=False, verbose=False, delay=0, ep_label=0):
+    def play(self, render=False, verbose=False, delay=0, ep_label=0, test=True):
         done = False
         score = 0.
         step = 0
@@ -40,7 +40,13 @@ class Randomly(Agent):
         stat = {
             'score': score,
             'step': step,
-            'end': info['end']
         }
+        if 'end' in info:
+            stat['end'] = info['end']
         return stat
-            
+    
+    def load_model(self, path=None):
+        pass
+
+    def save_model(self, path=None):
+        pass
