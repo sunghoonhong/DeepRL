@@ -15,6 +15,7 @@ if __name__ == '__main__':
     parser.add_argument('--env',    type=str, choices=envs.__all__, default='snake_v2')
     parser.add_argument('--agent',  choices=agents.AGENT_MAP.keys(), default='randomly')
     parser.add_argument('--load_model', action='store_true')
+    parser.add_argument('--test', action='store_true')
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--dense',  action='store_false')
@@ -23,19 +24,19 @@ if __name__ == '__main__':
     parser.add_argument('--delay',  type=float, default=0.)
     parser.add_argument('--episode', type=int, default=int(1e8))
     parser.add_argument('--resize', type=int, default=84)
-    parser.add_argument('--horizon', type=int, default=64)
+    parser.add_argument('--horizon', type=int, default=128)
     parser.add_argument('--update_rate', type=int, default=1024)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--seqlen', type=int, default=4)
-    parser.add_argument('--actor_units', type=int, nargs='*', default=[256, 128])
-    parser.add_argument('--critic_units', type=int, nargs='*', default=[256, 128])
+    parser.add_argument('--actor_units', type=int, nargs='*', default=[256, 256])
+    parser.add_argument('--critic_units', type=int, nargs='*', default=[256, 256])
     parser.add_argument('--save_rate', type=int, default=100)
     args = parser.parse_args()
     print(args)
 
     weight_path = 'weights/%s/%s' % (args.env, args.agent)
     log_path = 'logs/%s' % (args.env)
-    log_file = os.path.join(log_path, 'log.csv')
+    log_file = os.path.join(log_path, '%s.csv' % args.agent)
 
     if not os.path.exists(weight_path):
         os.makedirs(weight_path)
@@ -58,12 +59,12 @@ if __name__ == '__main__':
     score = 0.
     step = 0.
     for episode in range(1, args.episode+1):
-        stat = agent.play(args.render, args.verbose, args.delay, episode)
+        stat = agent.play(args.render, args.verbose, args.delay, episode, args.test)
         stats.append(stat)
         score += stat['score']
         step += stat['step']
         print('[E%dT%d] Score: %d\t\t' % (episode, stat['step'], stat['score']), end='\r')
-        if episode % args.save_rate == 0:
+        if episode % args.save_rate == 0 and not args.test:
             # average stats
             score /= args.save_rate
             step /= args.save_rate

@@ -6,6 +6,10 @@ import numpy as np
 from agents.agent import Agent
 
 
+
+KEYS = ['score', 'step']
+
+
 class Randomly(Agent):
     
     def __init__(self, env, **kwargs):

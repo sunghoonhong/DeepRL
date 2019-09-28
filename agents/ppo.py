@@ -10,6 +10,9 @@ from models import actor_critic as ac
 from utils.func import *
 
 
+
+KEYS = ['score', 'step', 'actor_loss', 'critic_loss', 'pmax', 'end']
+
 class PPO(Agent):
     def __init__(self, **kwargs):
         self.env = kwargs.get('env')
@@ -56,6 +59,8 @@ class PPO(Agent):
             print('Critic Loaded... ', critic_path)
 
     def save_model(self, path):
+        actor_path = os.path.join(path, 'actor.h5')
+        critic_path = os.path.join(path, 'critic.h5')
         self.actor.save_weights(actor_path)
         self.critic.save_weights(critic_path)
 
@@ -142,7 +147,7 @@ class PPO(Agent):
         train_num = batch_num * self.epoch
         return actor_losses / train_num, critic_losses / train_num
 
-    def play(self, render=False, verbose=False, delay=0, ep_label=0):
+    def play(self, render=False, verbose=False, delay=0, ep_label=0, test=False):
         done = False
         score = 0.
         step = 0

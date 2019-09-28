@@ -29,10 +29,10 @@ DENSE_REWARD = {
 }
 
 SPARSE_REWARD = {
-    'goal': 1,
-    'boundary': -1,
-    'body': -1,
-    'trap': -1,
+    'goal': 10,
+    'boundary': -10,
+    'body': -5,
+    'trap': -5,
     'normal': 0
 }
 
