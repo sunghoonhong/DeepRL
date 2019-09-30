@@ -29,7 +29,7 @@ class Randomly(Agent):
             time.sleep(delay)
             action = self.get_action()
             if verbose:
-                stamp = '[EP%dT%d]' % (ep_label, step)
+                stamp = '[EP%dT%d] [Rew] %.2f' % (ep_label, step, score)
                 act_temp = ('{:.3f} ' * len(action)).format(*action)
                 print(stamp, act_temp, end='\r', flush=True)
             _, rew, done, info = self.env.step(action)
