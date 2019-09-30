@@ -243,7 +243,7 @@ class PPOfD(Agent):
 
         obs = self.env.reset()
         if sparsify:
-            pos = int(self.env.potential)
+            pos = int(self.env.robot.body_xyz[0])
         state = self.preprocess_obs(obs, self.env, self.resize, self.seqlen)
         if render:
             self.env.render()
@@ -267,8 +267,8 @@ class PPOfD(Agent):
                 print(stamp, act_temp, pi_temp, '\t', end='\r', flush=True)
             obs, true_rew, done, info = self.env.step(real_action)
             if sparsify:
-                next_pos = int(self.env.potential)
-                if next_pos - pos >= 1.:
+                next_pos = int(self.env.robot.body_xyz[0])
+                if next_pos - pos >= 1:
                     rew = 1.
                     pos = next_pos
                 else:
