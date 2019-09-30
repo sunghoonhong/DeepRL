@@ -1,6 +1,7 @@
 import os
 import time
 import random
+from datetime import datetime as dt
 from argparse import ArgumentParser
 import numpy as np
 import tensorflow as tf
@@ -146,7 +147,7 @@ class PPO(Agent):
                     clip_loss = -tf.reduce_mean(tf.minimum(ratio * g_b, clipped * g_b))
                     entropy = self.entropy_func(pred, log_pi)
                     
-                    actor_loss = clip_loss + self.entropy * entropy
+                    actor_loss = clip_loss - self.entropy * entropy
                 actor_grads = tape.gradient(actor_loss, self.actor.trainable_variables)
                 
                 self.critic.opt.apply_gradients(zip(critic_grads, self.critic.trainable_variables))
@@ -174,9 +175,9 @@ class PPO(Agent):
         while not done:
             time.sleep(delay)
             real_action, action, log_pi, policy = self.get_action(state)
-            
+
             if verbose:
-                stamp = '[EP%dT%d]' % (ep_label, step)
+                stamp = '[EP%dT%d] [Rew] %.2f ' % (ep_label, step, score)
                 if type(real_action) == int:
                     act_temp = '[Act] %d' % real_action
                 else:
@@ -231,6 +232,51 @@ class PPO(Agent):
         if 'end' in info:
             stat['end'] = info['end']
         return stat
+
+    def record(self, thres, path, render=False, verbose=False, delay=0, ep_label=0):
+        done = False
+        score = 0.
+        step = 0
+
+        obs = self.env.reset()
+        state = self.preprocess_obs(obs, self.env, self.resize, self.seqlen)
+        if render:
+            self.env.render()
+        
+        while not done:
+            time.sleep(delay)
+            real_action, action, log_pi, _ = self.get_action(state)
+            
+            if verbose:
+                stamp = '[EP%dT%d] [Rew] %.2f ' % (ep_label, step, score)
+                print(stamp, '\t', end='\r', flush=True)
+            obs, rew, done, _ = self.env.step(real_action)
+            next_state = self.preprocess_obs(obs, self.env, self.resize, self.seqlen, state)
+
+            step += 1
+            score += rew
+            
+            if render:
+                self.env.render()
+            self.append_horizon(state, action, rew, log_pi)
+            state = next_state
+
+        # done
+        if score >= thres:
+            states, actions, _, _ = self.memory.rollout()
+            states = np.concatenate(states, axis=0)
+            actions = np.concatenate(actions, axis=0)
+            timestamp = dt.now().strftime('%H_%M_%S')
+            filename = 'T%dS%.2f_%s' % (step, score, timestamp)
+            
+            record_path = os.path.join(path, filename)
+            while os.path.exists(record_path + '.npz'):
+                record_path += '_'
+                
+            np.savez_compressed(record_path, state=states, action=actions)
+            stamp = '[EP%dT%d] [Rew] %.2f ' % (ep_label, step, score)
+            print(stamp, 'saved...', record_path)
+            self.memory.flush()
 
 
 class ContinuousPPO(PPO):
