@@ -112,7 +112,7 @@ class RecurrentImageContinuousActor(tf.keras.models.Model):
 
         self.encoder = RecurrentConvEncoder()
         self.hiddens = [layers.Dense(unit, activation='relu', kernel_initializer='he_normal') for unit in hidden_units]
-        self.mean = layers.Dense(action_num, activation='tanh', kernel_initializer=tf.random_uniform_initializer(minval=-3e-3, maxval=3e-3))
+        self.mean = layers.Dense(action_num, activation='tanh', kernel_initializer=tf.random_uniform_initializer(minval=-1e-1, maxval=1e-1))
         self.log_std = tf.Variable([[tf.math.log(0.5)]*action_num])
 
     def call(self, s):
