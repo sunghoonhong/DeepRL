@@ -12,7 +12,7 @@ from utils.func import *
 
 
 
-KEYS = ['score', 'step', 'actor_loss', 'critic_loss', 'pmax', 'end']
+KEYS = ['true_score', 'score', 'step', 'actor_loss', 'critic_loss', 'pmax', 'end']
 
 class PPO(Agent):
     def __init__(self, **kwargs):
@@ -158,9 +158,9 @@ class PPO(Agent):
         train_num = batch_num * self.epoch
         return actor_losses / train_num, critic_losses / train_num
 
-    def play(self, render=False, verbose=False, delay=0, ep_label=0, test=False):
+    def play(self, render=False, verbose=False, delay=0, ep_label=0, test=False, sparsify=True):
         done = False
-        score = 0.
+        score, true_score = 0., 0.
         step = 0
         horizon_step = 0
         
@@ -168,6 +168,8 @@ class PPO(Agent):
         pmax = 0
 
         obs = self.env.reset()
+        if sparsify:
+            pos = int(self.env.robot.body_xyz[0])
         state = self.preprocess_obs(obs, self.env, self.resize, self.seqlen)
         if render:
             self.env.render()
@@ -177,7 +179,7 @@ class PPO(Agent):
             real_action, action, log_pi, policy = self.get_action(state)
 
             if verbose:
-                stamp = '[EP%dT%d] [Rew] %.2f ' % (ep_label, step, score)
+                stamp = '[EP%dT%d] [Rew] %.2f (%.2f) ' % (ep_label, step, score, true_score)
                 if type(real_action) == int:
                     act_temp = '[Act] %d' % real_action
                 else:
@@ -189,11 +191,22 @@ class PPO(Agent):
                     pi_temp = ' [Pi]' + (' {:.2f}' * len(policy)).format(*policy)
 
                 print(stamp, act_temp, pi_temp, '\t', end='\r', flush=True)
-            obs, rew, done, info = self.env.step(real_action)
+            obs, true_rew, done, info = self.env.step(real_action)
             next_state = self.preprocess_obs(obs, self.env, self.resize, self.seqlen, state)
+
+            if sparsify:
+                next_pos = int(self.env.robot.body_xyz[0])
+                if next_pos - pos >= 1:
+                    rew = 1.
+                    pos = next_pos
+                else:
+                    rew = 0.
+            else:
+                rew = true_rew
 
             step += 1
             score += rew
+            true_score += true_rew
             horizon_step += 1
             if type(real_action) == int:
                 pmax += np.max(policy)
@@ -223,6 +236,7 @@ class PPO(Agent):
             a_loss, c_loss = 0., 0.
         pmax /= step
         stat = {
+            'true_score': true_score,
             'score': score,
             'step': step,
             'actor_loss': a_loss,
@@ -231,6 +245,8 @@ class PPO(Agent):
         }
         if 'end' in info:
             stat['end'] = info['end']
+        if 'score' in info:
+            stat['true_score'] = info['score']
         return stat
 
     def record(self, thres, path, render=False, verbose=False, delay=0, ep_label=0):
@@ -387,7 +403,7 @@ class RecurrentImageContinuousPPO(PPO):
         real_action = action[0]     # (A,)
         real_action = \
             transform_cont_action(real_action, self.action_space.low, self.action_space.high)
-        return real_action, action, log_pi, mean[0]
+        return real_action, action, log_pi, (mean[0], std[0])
 
 
 # TODO: sharing encoder PPO

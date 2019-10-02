@@ -12,7 +12,7 @@ from utils.func import *
 
 
 
-KEYS = ['score', 'true_score', 'step', 'actor_loss', 'critic_loss', 'pmax', 'end']
+KEYS = ['true_score', 'score', 'step', 'actor_loss', 'critic_loss', 'pmax', 'end']
 
 class PPOfD(Agent):
     def __init__(self, **kwargs):
