@@ -358,7 +358,7 @@ class ImageContinuousPPO(PPO):
         self.entropy_func = tf_cont_entropy
         self.log_pi_func = tf_cont_log_pi
 
-        self.state_shape = [self.resize, self.resize, 3]
+        self.state_shape = [self.resize, self.resize, self.seqlen]
 
         self.actor = ac.ImageContinuousActor(self.action_num, self.actor_units)
         self.critic = ac.ImageCritic(self.critic_units)
