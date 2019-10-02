@@ -33,7 +33,7 @@ SPARSE_REWARD = {
     'boundary': -10,
     'body': -5,
     'trap': -5,
-    'normal': 0
+    'normal': 0.1
 }
 
 # size
@@ -411,6 +411,7 @@ class Env:
         self.game.input(action[0], action[1])
         info = {}
         info['end'] = self.game.update()
+        info['score'] = self.game.score
         done = (self.game.snake.life <= 0)
         reward = self.scheme[info['end']]
             
