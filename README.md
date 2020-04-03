@@ -7,7 +7,9 @@ I work in TensorFlow2 Framework
     - Observation space: (RGB array or Extracted features)
     - Action space: Discrete(3), [Go Straight / Turn Left / Turn Right]
     - Reward scheme: (Dense or Sparse)
-    ![PPO agent after 50000 episodes](https://github.com/sunghoonhong/DeepRL_tf1/blob/master/tensorflow1/snake_feature/gifs/ppo%20after%2050000%20episode.gif)
+    
+![PPO agent after 50000 episodes](https://github.com/sunghoonhong/DeepRL_tf1/blob/master/tensorflow1/snake_feature/gifs/ppo%20after%2050000%20episode.gif)
+    
 - Snake_v2
     - Observation space: (RGB array)
     - Action space: Box(2), [Speed(0.0 ~ 1.0), Angle(-1.0 ~ 1.0)]
