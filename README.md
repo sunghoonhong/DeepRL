@@ -29,6 +29,4 @@ I work in TensorFlow2 Framework
     - BC (Behavior Cloning)
     - GAIL (Generative Adversarial Imitation Learning)
     - VAIL (Variational GAIL)
-    - MAIL (Mature GAIL)
     - DI-GAIL (Directed-Info GAIL)
-    - DI-MAIL (Mature DI-GAIL)
